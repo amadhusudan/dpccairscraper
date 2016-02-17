@@ -16,8 +16,8 @@ def hello():
 
 @app.route('/8dqUUbjDbujeXgEyPQBhjevQTjHJSHd748YqvphFdkQGTgP6QUh4tXcMUuWbGT2R7XDJqDjb4EhGjG7pVrFq3wQV4F4qmWTGaTrp')
 def scrape():
-    return DPCCAirScrawler.scrape()
-    return ''
+    DPCCAirScrawler.scrape()
+    return 'Scraping Done'
 
 @app.errorhandler(404)
 def page_not_found(e):

@@ -24,8 +24,8 @@ DPCC_URL_ALL_AREAS = {
 
 def get_datetime(dt, tm):
     dtmstring = "%s::%s" %(dt, tm)
-    dtm = datetime.strptime(dtmstring, "%A, %B %d, %Y::%H:%M:%S")
-    return dtm
+    #dtm = datetime.strptime(dtmstring, "%A, %B %d, %Y::%H:%M:%S")
+    return dtmstring
 
 def unicode_escape(v):
     return v.encode('unicode-escape')
@@ -33,7 +33,7 @@ def unicode_escape(v):
 class DPCCItem(db.Model):
     area = db.StringProperty(required=True)
     parameter = db.StringProperty(required=True)
-    date = db.DateTimeProperty(required=True)
+    date = db.StringProperty(required=True)
     value = db.StringProperty(required=True)
     standard = db.StringProperty(required=False)
 
@@ -76,8 +76,8 @@ class DPCCAirScrawler:
             except urllib2.URLError as e:
                 print "URL Open Status Code Exception: %s" % str(e)
 
-        retval = ''
-        for item in DPCCItem.all():
-            retval = retval + "\n" + str(item)
+        #retval = ''
+        #for item in DPCCItem.all():
+        #    retval = retval + "\n" + str(item)
 
-        return retval
+        #return retval
