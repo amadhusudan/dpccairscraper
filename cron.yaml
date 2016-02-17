@@ -1,0 +1,4 @@
+cron:
+- description: 30 minute scraper
+  url: /8dqUUbjDbujeXgEyPQBhjevQTjHJSHd748YqvphFdkQGTgP6QUh4tXcMUuWbGT2R7XDJqDjb4EhGjG7pVrFq3wQV4F4qmWTGaTrp
+  schedule: every 2 minutes
