@@ -1,11 +1,12 @@
 from __future__ import unicode_literals
  
 from google.appengine.ext import db
+from google.appengine.api import mail
 from datetime import datetime
 import urllib2
 from lxml import html
-
-import pdb
+import logging
+#import pdb
 
 DPCC_URL_AREA_ANAND_VIHAR = 'http://www.dpccairdata.com/dpccairdata/display/avView15MinData.php'
 DPCC_URL_AREA_MANDIR_MARG = 'http://www.dpccairdata.com/dpccairdata/display/mmView15MinData.php'
@@ -15,11 +16,11 @@ DPCC_URL_AREA_IGI_AIRPORT = 'http://www.dpccairdata.com/dpccairdata/display/airp
 DPCC_URL_AREA_CIVIL_LINES = 'http://www.dpccairdata.com/dpccairdata/display/civilLinesView15MinData.php'
 
 DPCC_URL_ALL_AREAS = {
-    'ANAND VIHAR' : DPCC_URL_AREA_ANAND_VIHAR,
-    'MANDIR MARG' : DPCC_URL_AREA_MANDIR_MARG,
-    'PUNJABI BAGH': DPCC_URL_AREA_PUNJABI_BAGH,
-    'RK PURAM' : DPCC_URL_AREA_RK_PURAM,
-    'CIVIL LINES' : DPCC_URL_AREA_CIVIL_LINES
+    'Anand Vihar' : DPCC_URL_AREA_ANAND_VIHAR,
+    'Mandir Marg' : DPCC_URL_AREA_MANDIR_MARG,
+    'Punjabi Bagh': DPCC_URL_AREA_PUNJABI_BAGH,
+    'RK Puram' : DPCC_URL_AREA_RK_PURAM,
+    'Civil Lines' : DPCC_URL_AREA_CIVIL_LINES
     }
 
 def get_datetime(dt, tm):
@@ -28,7 +29,10 @@ def get_datetime(dt, tm):
     return dtmstring
 
 def unicode_escape(v):
-    return v.encode('unicode-escape')
+    return v.encode('ascii', errors='backslashreplace')
+
+def send_mail(subject, body):
+    mail.send_mail("madhusudan.bit@gmail.com", "madhusudan.bit@gmail.com", subject, body)
 
 class DPCCItem(db.Model):
     area = db.StringProperty(required=True)
@@ -37,9 +41,9 @@ class DPCCItem(db.Model):
     value = db.StringProperty(required=True)
     standard = db.StringProperty(required=False)
 
-    def __str__(self):
+    def __unicode__(self):
         return "Area: %s::Date: %s, Parameter: %s, Value: %s, Standard: %s" %(self.area, str(self.date), 
-                str(self.parameter), unicode_escape(self.value), unicode_escape(self.standard))
+                self.parameter, unicode_escape(self.value), unicode_escape(self.standard))
 
 class DPCCAirScrawler:
     @staticmethod
@@ -50,12 +54,12 @@ class DPCCAirScrawler:
                 raw_html = response.read()
                 dom = html.fromstring(raw_html)
                 pollution_data = dom.xpath("//tr[@class='tdcolor1']|//tr[@class='tdcolor2']")
+
                 for pd in pollution_data:
                     pm = pd.xpath('./td[1]/text()')[0].strip()
                     dt = pd.xpath('./td[2]/text()')[0].strip()
                     tm = pd.xpath('./td[3]/text()')[0].strip()
                     vl = pd.xpath('./td[4]/text()')[0].strip()
-                    ut = pd.xpath('./td[4]/text()')[0].strip()
                     st = pd.xpath('./td[5]/text()')[0].strip()
 
                     # Check if value has a <sup> (superscript) as well and get that
@@ -64,15 +68,28 @@ class DPCCAirScrawler:
                     if sup:
                         sup = sup[0].strip()
                         vl = vl + sup
-                        ut = ut + sup
                         st = st + sup
 
-                    print "ar: %s, pm: %s, dt: %s, tm: %s, vl: %s, st: %s" % (a, str(pm), str(dt), str(tm), 
-                                            unicode_escape(vl), unicode_escape(st))
+                    try:
+                        logging.info("Scraping ar: %s, pm: %s, dt: %s, tm: %s, vl: %s, st: %s" % (a, unicode_escape(pm), 
+                            unicode_escape(dt), unicode_escape(tm), unicode_escape(vl), unicode_escape(st)))
+                        
+                        item = DPCCItem(area=a, parameter=pm, value=vl, date=get_datetime(dt, tm))
+                        item.standard = st
+                        item.put()
+                    except UnicodeEncodeError as ue:
+                        logging.error("Unicode Failure: %s" %str(ue))
+                        subject = "DPCCAirScrawler Scraper Failure : Unicode Error"
+                        body = "An UnicodeEncodeError Occured while scraping data for %s\n\n" %(a)
+                        body = body + "The Following Exception Occured\n %s\n\n" %(str(ue))
+                        #send_mail(subject, body)
+                    except Exception as e:
+                        logging.error("Caught General Exception: %s" %str(e))
+                        subject = "DPCCAirScrawler Scraper Failure : Unknown Exception"
+                        body = "An General Exception Occured while scraping data for %s\n\n" %(a)
+                        body = body + "The Following Exception Occured\n %s\n\n" %(str(e))
+                        #send_mail(subject, body)
 
-                    item = DPCCItem(area=a, parameter=str(pm), value=vl, date=get_datetime(dt, tm))
-                    item.standard = st
-                    item.put()
             except urllib2.URLError as e:
                 print "URL Open Status Code Exception: %s" % str(e)
 
